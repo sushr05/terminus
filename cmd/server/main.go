@@ -17,11 +17,11 @@ func main() {
 	})
 
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8081",
 		Handler: mux,
 	}
 
-	log.Println("terminus server listening on :8080")
+	log.Println("terminus server listening on :8081")
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server failed: %v", err)
 	}
