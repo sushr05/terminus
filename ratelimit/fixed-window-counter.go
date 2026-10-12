@@ -50,7 +50,7 @@ func (l *fixedWindowLimiter) allow(clientID string) bool {
 		}
 	}
 
-	if state.count > l.limit {
+	if state.count >= l.limit {
 		l.clients[clientID] = state
 		return false
 	}
