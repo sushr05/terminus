@@ -35,12 +35,12 @@ func NewLeakyBucketLimiter(
 	}
 }
 
-func (l *LeakyBucketLimiter) Allow(clientId string) bool {
+func (l *LeakyBucketLimiter) Allow(clientID string) bool {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	state, exists := l.clients[clientId]
+	state, exists := l.clients[clientID]
 
 	if !exists {
 		state = leakyBucketState{lastCheck: now}
@@ -57,12 +57,12 @@ func (l *LeakyBucketLimiter) Allow(clientId string) bool {
 	state.lastCheck = now
 
 	if state.level+1 > l.capacity {
-		l.clients[clientId] = state
+		l.clients[clientID] = state
 		return false
 	}
 
 	state.level++
-	l.clients[clientId] = state
+	l.clients[clientID] = state
 
 	return true
 }

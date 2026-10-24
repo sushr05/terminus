@@ -17,7 +17,7 @@ type fixedWindowLimiter struct {
 	clients map[string]windowState
 }
 
-func newFixedWindowLimiter(
+func NewFixedWindowLimiter(
 	limit int,
 	window time.Duration,
 ) *fixedWindowLimiter {
@@ -35,7 +35,7 @@ func newFixedWindowLimiter(
 	}
 }
 
-func (l *fixedWindowLimiter) allow(clientID string) bool {
+func (l *fixedWindowLimiter) Allow(clientID string) bool {
 	now := time.Now()
 
 	l.mu.Lock()
