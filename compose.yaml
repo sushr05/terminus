@@ -1,0 +1,47 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  terminus:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_ADDR=:8081
+      - RATE_LIMIT_ALGORITHM=${RATE_LIMIT_ALGORITHM:-token_bucket}
+      - MODE=${MODE:-local}
+
+      # Token bucket
+      - TOKEN_BUCKET_CAPACITY=${TOKEN_BUCKET_CAPACITY:-5}
+      - TOKEN_BUCKET_REFILL_RATE=${TOKEN_BUCKET_REFILL_RATE:-1}
+
+      # Fixed window
+      - FIXED_WINDOW_LIMIT=${FIXED_WINDOW_LIMIT:-10}
+      - FIXED_WINDOW_DURATION=${FIXED_WINDOW_DURATION:-1m}
+
+      # Sliding log
+      - SLIDING_LOG_LIMIT=${SLIDING_LOG_LIMIT:-10}
+      - SLIDING_LOG_WINDOW=${SLIDING_LOG_WINDOW:-1m}
+
+      # Sliding counter
+      - SLIDING_COUNTER_LIMIT=${SLIDING_COUNTER_LIMIT:-10}
+      - SLIDING_COUNTER_WINDOW=${SLIDING_COUNTER_WINDOW:-1m}
+
+      # Leaky bucket
+      - LEAKY_BUCKET_CAPACITY=${LEAKY_BUCKET_CAPACITY:-5}
+      - LEAKY_BUCKET_LEAK_RATE=${LEAKY_BUCKET_LEAK_RATE:-1}
+
+      # Redis (used when MODE=distributed)
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy

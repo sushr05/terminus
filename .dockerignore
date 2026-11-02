@@ -1,0 +1,8 @@
+.git
+.gitignore
+.env
+.env.*
+*.exe
+*.test
+coverage.out
+README.md
