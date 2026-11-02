@@ -4,12 +4,22 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Config struct {
 	ServerAddr string
 	Algorithm  string
+
+	// Mode controls whether rate limiting is local or Redis-backed.
+	// Accepted values: "local", "distributed".
+	Mode string
+
+	// Redis connection settings — only used in distributed mode.
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       int
 
 	FixedWindowLimit    int
 	FixedWindowDuration time.Duration
@@ -29,8 +39,12 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		ServerAddr: getEnv("SERVER_ADDR", ":8081"),
-		Algorithm:  getEnv("RATE_LIMIT_ALGORITHM", "token_bucket"),
+		ServerAddr: strings.TrimSpace(getEnv("SERVER_ADDR", ":8081")),
+		Algorithm:  strings.TrimSpace(getEnv("RATE_LIMIT_ALGORITHM", "token_bucket")),
+		Mode:       strings.TrimSpace(getEnv("MODE", "local")),
+
+		RedisAddr:     strings.TrimSpace(getEnv("REDIS_ADDR", "localhost:6379")),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 
 		FixedWindowLimit:    10,
 		FixedWindowDuration: time.Minute,
@@ -49,6 +63,10 @@ func Load() (Config, error) {
 	}
 
 	var err error
+
+	if cfg.RedisDB, err = getEnvInt("REDIS_DB", 0); err != nil {
+		return Config{}, err
+	}
 
 	if cfg.FixedWindowLimit, err = getEnvInt(
 		"FIXED_WINDOW_LIMIT", cfg.FixedWindowLimit,
@@ -120,6 +138,26 @@ func Load() (Config, error) {
 func (c Config) Validate() error {
 	if c.ServerAddr == "" {
 		return fmt.Errorf("SERVER_ADDR cannot be empty")
+	}
+
+	switch c.Mode {
+	case "local":
+		// No additional validation required.
+	case "distributed":
+		if c.RedisAddr == "" {
+			return fmt.Errorf(
+				"REDIS_ADDR cannot be empty when MODE is \"distributed\"",
+			)
+		}
+
+		if c.RedisDB < 0 {
+			return fmt.Errorf("REDIS_DB cannot be negative")
+		}
+	default:
+		return fmt.Errorf(
+			"unsupported mode: %q (must be \"local\" or \"distributed\")",
+			c.Mode,
+		)
 	}
 
 	switch c.Algorithm {
@@ -221,5 +259,3 @@ func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
 
 	return parsed, nil
 }
-
-//right now its a flat eager approach where we send all to factory and it chooses what it needs. but in future can make it lazy loaded ie we load the config only when we need it.
