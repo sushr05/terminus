@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ func NewFixedWindowLimiter(
 	}
 }
 
-func (l *fixedWindowLimiter) Allow(clientID string) bool {
+func (l *fixedWindowLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	now := time.Now()
 
 	l.mu.Lock()
@@ -52,11 +53,11 @@ func (l *fixedWindowLimiter) Allow(clientID string) bool {
 
 	if state.count >= l.limit {
 		l.clients[clientID] = state
-		return false
+		return false, nil
 	}
 
 	state.count++
 	l.clients[clientID] = state
 
-	return true
+	return true, nil
 }

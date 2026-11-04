@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -30,7 +31,7 @@ func NewSlidingWindowLogLimiter(
 	}
 }
 
-func (l *SlidingWindowLogLimiter) Allow(clientID string) bool {
+func (l *SlidingWindowLogLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	now := time.Now()
 	cutoff := now.Add(-l.window)
 
@@ -48,11 +49,11 @@ func (l *SlidingWindowLogLimiter) Allow(clientID string) bool {
 
 	if len(timestamps) >= l.limit {
 		l.clients[clientID] = timestamps
-		return false
+		return false, nil
 	}
 
 	timestamps = append(timestamps, now)
 	l.clients[clientID] = timestamps
 
-	return true
+	return true, nil
 }

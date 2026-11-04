@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -9,44 +10,80 @@ import (
 
 func TestSlidingWindowLogLimit(t *testing.T) {
 	limiter := NewSlidingWindowLogLimiter(2, time.Minute)
-	if !limiter.Allow("user-1") {
+	ctx := context.Background()
+
+	allowed, err := limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("first request should be allowed")
 	}
-	if !limiter.Allow("user-1") {
+
+	allowed, err = limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("second request should be allowed")
 	}
-	if limiter.Allow("user-1") {
+
+	allowed, err = limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if allowed {
 		t.Fatal("third request should not be allowed")
 	}
 }
 
 func TestSlidingWindowLogSeparatesClients(t *testing.T) {
 	limiter := NewSlidingWindowLogLimiter(1, time.Minute)
+	ctx := context.Background()
 
-	if !limiter.Allow("user-1") {
+	allowed, err := limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("first client's request should be allowed")
 	}
-	if !limiter.Allow("user-2") {
+
+	allowed, err = limiter.Allow(ctx, "user-2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("second client's request should be allowed")
 	}
 }
 
 func TestSlidingWindowLogExpiresRequests(t *testing.T) {
 	limiter := NewSlidingWindowLogLimiter(1, 50*time.Millisecond)
+	ctx := context.Background()
 
-	if !limiter.Allow("user-1") {
+	allowed, err := limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("first request should be allowed")
 	}
 
 	time.Sleep(70 * time.Millisecond)
 
-	if !limiter.Allow("user-1") {
+	allowed, err = limiter.Allow(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
 		t.Fatal("request should be allowed after the window expires")
 	}
 }
 
 func TestSlidingWindowLogConcurrentRequests(t *testing.T) {
 	limiter := NewSlidingWindowLogLimiter(10, time.Minute)
+	ctx := context.Background()
 
 	var wg sync.WaitGroup
 	var allowed atomic.Int32
@@ -57,7 +94,12 @@ func TestSlidingWindowLogConcurrentRequests(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			if limiter.Allow("user-1") {
+			ok, err := limiter.Allow(ctx, "user-1")
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if ok {
 				allowed.Add(1)
 			}
 		}()

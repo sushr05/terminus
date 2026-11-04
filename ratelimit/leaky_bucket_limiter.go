@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ func NewLeakyBucketLimiter(
 	}
 }
 
-func (l *LeakyBucketLimiter) Allow(clientID string) bool {
+func (l *LeakyBucketLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -58,11 +59,11 @@ func (l *LeakyBucketLimiter) Allow(clientID string) bool {
 
 	if state.level+1 > l.capacity {
 		l.clients[clientID] = state
-		return false
+		return false, nil
 	}
 
 	state.level++
 	l.clients[clientID] = state
 
-	return true
+	return true, nil
 }

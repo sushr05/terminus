@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -36,7 +37,7 @@ func NewSlidingWindowCounterLimiter(
 	}
 }
 
-func (l *SlidingWindowCounterLimiter) Allow(clientID string) bool {
+func (l *SlidingWindowCounterLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -71,11 +72,11 @@ func (l *SlidingWindowCounterLimiter) Allow(clientID string) bool {
 
 	if estimatedCount >= float64(l.limit) {
 		l.clients[clientID] = state
-		return false
+		return false, nil
 	}
 
 	state.currentCount++
 	l.clients[clientID] = state
 
-	return true
+	return true, nil
 }

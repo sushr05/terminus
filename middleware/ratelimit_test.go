@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,14 +11,15 @@ import (
 
 type fakeLimiter struct {
 	allowed  bool
+	err      error
 	called   bool
 	clientID string
 }
 
-func (f *fakeLimiter) Allow(clientID string) bool {
+func (f *fakeLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	f.called = true
 	f.clientID = clientID
-	return f.allowed
+	return f.allowed, f.err
 }
 
 func TestRateLimitMiddlewareAllowsRequest(t *testing.T) {
@@ -138,5 +141,31 @@ func TestRateLimitMiddlewareMakesDecisionPerRequest(t *testing.T) {
 
 	if handlerCalls != 1 {
 		t.Fatalf("after rejected request, handler calls = %d, want 1", handlerCalls)
+	}
+}
+
+func TestRateLimitMiddlewareReturns500OnLimiterError(t *testing.T) {
+	limiter := &fakeLimiter{
+		allowed: false,
+		err:     errors.New("redis connection refused"),
+	}
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not execute when limiter errors")
+	})
+
+	handler := RateLimitMiddleware(limiter, next)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("got status %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+
+	if !strings.Contains(rec.Body.String(), "internal server error") {
+		t.Fatalf("unexpected response body: %q", rec.Body.String())
 	}
 }

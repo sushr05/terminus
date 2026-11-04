@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net"
 	"net/http"
 
@@ -17,7 +18,18 @@ func RateLimitMiddleware(
 			host = r.RemoteAddr
 		}
 
-		if !limiter.Allow(host) {
+		allowed, err := limiter.Allow(r.Context(), host)
+		if err != nil {
+			log.Printf("rate limiter error: %v", err)
+			http.Error(
+				w,
+				"internal server error",
+				http.StatusInternalServerError,
+			)
+			return
+		}
+
+		if !allowed {
 			http.Error(
 				w,
 				"rate limit exceeded",

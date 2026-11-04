@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -34,7 +35,7 @@ func NewTokenBucketLimiter(
 	}
 }
 
-func (l *TokenBucketLimiter) Allow(clientID string) bool {
+func (l *TokenBucketLimiter) Allow(_ context.Context, clientID string) (bool, error) {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -58,12 +59,11 @@ func (l *TokenBucketLimiter) Allow(clientID string) bool {
 
 	if state.tokens < 1 {
 		l.clients[clientID] = state
-		return false
+		return false, nil
 	}
 
 	state.tokens--
 	l.clients[clientID] = state
 
-	return true
-
+	return true, nil
 }
