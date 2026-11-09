@@ -1,0 +1,29 @@
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+terminus
+
+# Test artifacts
+*.test
+*.out
+coverage.html
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
