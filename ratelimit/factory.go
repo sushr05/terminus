@@ -15,7 +15,17 @@ func NewLimiter(cfg config.Config, client *redis.Client) (RateLimiter, error) {
 		if client == nil {
 			return nil, fmt.Errorf("redis client is required for distributed mode")
 		}
-		return newDistributedLimiter(cfg, client)
+		distributedLimiter, err := newDistributedLimiter(cfg, client)
+		if err != nil {
+			return nil, err
+		}
+
+		localFallback, err := newLocalLimiter(cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewFallbackLimiter(distributedLimiter, localFallback)
 	default:
 		return nil, fmt.Errorf("unsupported mode: %q", cfg.Mode)
 	}
